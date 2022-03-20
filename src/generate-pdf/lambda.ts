@@ -2,18 +2,8 @@ import * as chromium from "chrome-aws-lambda";
 import * as fs from "fs";
 import * as AWS from "aws-sdk";
 const s3obj = new AWS.S3();
-const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || "";
-// import * as AWS from "aws-sdk";
-// const db = new AWS.DynamoDB.DocumentClient();
-// const TABLE_NAME = process.env.TABLE_NAME || "";
-// const PRIMARY_KEY = process.env.PRIMARY_KEY || "";
-
-// // // //
-
-function createTmpFile() {
-  const content = `<h1>Generate Test PDF</h1>`;
-  fs.writeFileSync("/tmp/test.html", content);
-}
+const HTML_S3_BUCKET_NAME = process.env.HTML_S3_BUCKET_NAME || "";
+const PDFS_S3_BUCKET_NAME = process.env.PDFS_S3_BUCKET_NAME || "";
 
 // // // //
 
@@ -23,10 +13,49 @@ export const handler = async (
 ): Promise<any> => {
   // Log start message
   console.log("generate-pdf -> start");
-  console.log(event);
+  console.log(JSON.stringify(event, null, 4));
 
-  // TODO - remove this
-  createTmpFile();
+  // Pulls htmlFilename from event
+  const htmlFilename = event["Records"][0]["s3"]["object"]["key"];
+  const htmlFilepath: string = `/tmp/${htmlFilename}`;
+
+  // Defines filename + path for downloaded HTML file
+  const pdfFilename: string = htmlFilename.replace(".html", ".pdf");
+  const pdfFilepath: string = `/tmp/${pdfFilename}`;
+
+  // Defines URL to read htmlFilepath
+  const fetchUrl: string = `file://${htmlFilepath}`;
+
+  console.log(`htmlFilename: ${htmlFilename}`);
+  console.log(`htmlFilepath: ${htmlFilepath}`);
+  console.log(`pdfFilename: ${pdfFilename}`);
+  console.log(`pdfFilepath: ${pdfFilepath}`);
+
+  // Download HTML from S3 bucket to /tmp/
+  await new Promise((resolve, reject) => {
+    s3obj
+      .getObject({
+        Bucket: HTML_S3_BUCKET_NAME,
+        Key: htmlFilename,
+      })
+      .send((err, data) => {
+        console.log(err, data);
+        // Logs error
+        if (err) {
+          console.log(`generate-pdf -> download HTML from s3 -> ERROR`);
+          console.log(err);
+          reject(err);
+          return;
+        }
+        console.log(
+          `generate-pdf -> download HTML from s3 -> SUCCESS --> ${htmlFilename}`
+        );
+
+        // Writes HTML to temp file
+        fs.writeFileSync(htmlFilepath, data.Body);
+        resolve(true);
+      });
+  });
 
   // Define
   let result = null;
@@ -44,12 +73,6 @@ export const handler = async (
     // Defines page
     let page = await browser.newPage();
 
-    // Gets fetchUrl for puppeteer
-    // This is the page with all the PDF download URLs
-    // const fetchUrl: string = buildFetchUrl();
-    const filename: string = "test.html";
-    const fetchUrl: string = `file:///tmp/${filename}`;
-
     // Navigate to page, wait until dom content is loaded
     await page.goto(fetchUrl, {
       waitUntil: "domcontentloaded",
@@ -57,7 +80,7 @@ export const handler = async (
 
     // Generate PDF from page in puppeteer
     await page.pdf({
-      path: "/tmp/test.pdf",
+      path: pdfFilepath,
       format: "A4",
       margin: {
         top: "20px",
@@ -68,22 +91,28 @@ export const handler = async (
     });
 
     // Upload generated PDF to S3 bucket
-    s3obj
-      .upload({
-        Bucket: S3_BUCKET_NAME,
-        Key: "test.pdf",
-        Body: fs.readFileSync("/tmp/test.pdf"),
-      })
-      .send((err, data) => {
-        console.log(err, data);
-        // Logs error
-        if (err) {
-          console.log(`generate-pdf -> upload to s3 -> ERROR`);
-          console.log(err);
-          return;
-        }
-        console.log(`generate-pdf -> upload to s3 -> SUCCESS --> ${filename}`);
-      });
+    await new Promise((resolve, reject) => {
+      s3obj
+        .upload({
+          Bucket: PDFS_S3_BUCKET_NAME,
+          Key: pdfFilename,
+          Body: fs.readFileSync(pdfFilepath),
+        })
+        .send((err, data) => {
+          console.log(err, data);
+          // Logs error
+          if (err) {
+            console.log(`generate-pdf -> upload to s3 -> ERROR`);
+            console.log(err);
+            reject(err);
+            return;
+          }
+          console.log(
+            `generate-pdf -> upload to s3 -> SUCCESS --> ${htmlFilepath}`
+          );
+          resolve(true);
+        });
+    });
   } catch (error) {
     return context.fail(error);
   } finally {

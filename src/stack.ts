@@ -11,6 +11,7 @@ import * as s3 from "@aws-cdk/aws-s3";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as cdk from "@aws-cdk/core";
 import { RemovalPolicy } from "@aws-cdk/core";
+import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
 
 // // // //
 
@@ -38,6 +39,42 @@ export class PdfGeneratorPipeline extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       }
     );
+
+    // // // //
+    // // // //
+
+    // // // //
+    // Provisions send-pdf-to-textract lambda
+
+    // // sendPdfToTextract Lambda
+    // const sendPdfToTextract = new lambda.Function(
+    //   this,
+    //   "sendPdfToTextractFunction",
+    //   {
+    //     code: new lambda.AssetCode("src/send-pdf-to-textract"),
+    //     handler: "lambda.handler",
+    //     runtime: lambda.Runtime.NODEJS_10_X,
+    //     environment: {
+    //       TABLE_NAME: parsedPdfDataTable.tableName,
+    //       PRIMARY_KEY: "itemId",
+    //       S3_BUCKET_NAME: downloadsBucket.bucketName,
+    //     }
+    //   }
+    // );
+
+    // // Configure event source so the `sendPdfToTextract` is run each time a file is downloaded to S3
+    // // Doc: https://docs.aws.amazon.com/cdk/api/latest/docs/aws-lambda-event-sources-readme.html#s3
+    // sendPdfToTextract.addEventSource(
+    //   new S3EventSource(downloadsBucket, {
+    //     events: [s3.EventType.OBJECT_CREATED]
+    //   })
+    // );
+
+    // // Adds permissions for the sendPdfToTextract read/write from S3 buckets
+    // downloadsBucket.grantReadWrite(sendPdfToTextract);
+
+    // // // //
+    // // // //
 
     // // // //
     // Provisions generate-pdf lambda
@@ -73,11 +110,21 @@ export class PdfGeneratorPipeline extends cdk.Stack {
       timeout: cdk.Duration.seconds(300),
       memorySize: 1024,
       environment: {
-        S3_BUCKET_NAME: pdfsBucket.bucketName,
+        HTML_S3_BUCKET_NAME: htmlBucket.bucketName,
+        PDFS_S3_BUCKET_NAME: pdfsBucket.bucketName,
       },
     });
 
+    // Configure event source so the `sendPdfToTextract` is run each time a file is downloaded to S3
+    // Doc: https://docs.aws.amazon.com/cdk/api/latest/docs/aws-lambda-event-sources-readme.html#s3
+    generatePdfLambda.addEventSource(
+      new S3EventSource(htmlBucket, {
+        events: [s3.EventType.OBJECT_CREATED],
+      })
+    );
+
     // Adds permissions for the generatePdfLambda to read/write to S3
+    htmlBucket.grantReadWrite(generatePdfLambda);
     pdfsBucket.grantReadWrite(generatePdfLambda);
   }
 }
