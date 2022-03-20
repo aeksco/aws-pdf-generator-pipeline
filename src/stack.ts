@@ -19,6 +19,16 @@ export class PdfGeneratorPipeline extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id);
 
+    // Provisions S3 bucket for HTML source files
+    // Doc: https://docs.aws.amazon.com/cdk/api/latest/docs/aws-s3-readme.html#logging-configuration
+    const htmlBucket: s3.Bucket = new s3.Bucket(
+      this,
+      "pdf-generator-input-bucket",
+      {
+        removalPolicy: RemovalPolicy.DESTROY,
+      }
+    );
+
     // Provisions S3 bucket for geneated PDFs
     // Doc: https://docs.aws.amazon.com/cdk/api/latest/docs/aws-s3-readme.html#logging-configuration
     const pdfsBucket: s3.Bucket = new s3.Bucket(
@@ -28,6 +38,28 @@ export class PdfGeneratorPipeline extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       }
     );
+
+    // // // //
+    // Provisions generate-pdf lambda
+    // NOTE - we bump the memory to 1024mb here to accommodate the memory requirements for Puppeteer
+
+    // DownloadURL Crawler Lambda
+    const writeHtmlToS3Lambda = new lambda.Function(
+      this,
+      "writeHtmlToS3Lambda",
+      {
+        code: new lambda.AssetCode("src/write-html-to-s3"),
+        handler: "lambda.handler",
+        runtime: lambda.Runtime.NODEJS_12_X,
+        timeout: cdk.Duration.seconds(10),
+        environment: {
+          S3_BUCKET_NAME: htmlBucket.bucketName,
+        },
+      }
+    );
+
+    // Adds permissions for the writeHtmlToS3Lambda to read/write to S3
+    htmlBucket.grantReadWrite(writeHtmlToS3Lambda);
 
     // // // //
     // Provisions generate-pdf lambda
