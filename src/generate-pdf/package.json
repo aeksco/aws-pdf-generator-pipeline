@@ -1,0 +1,10 @@
+{
+  "name": "generate-pdf-lambda",
+  "version": "1.0.0",
+  "description": "Generates a PDF when the source HTML file is uploaded to S3",
+  "private": true,
+  "dependencies": {
+    "chrome-aws-lambda": "^2.1.1",
+    "puppeteer-core": "^2.1.1"
+  }
+}
