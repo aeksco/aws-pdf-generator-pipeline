@@ -1,0 +1,14 @@
+{
+    "name": "write-html-to-s3-lambda",
+    "version": "1.0.0",
+    "description": "Generates an HTML file and uploads to S3",
+    "private": true,
+    "dependencies": {
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2"
+    },
+    "devDependencies": {
+        "@types/react": "^17.0.41",
+        "@types/react-dom": "^17.0.14"
+    }
+}

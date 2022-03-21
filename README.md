@@ -1,6 +1,6 @@
 # aws-pdf-generator-pipeline
 
-:mag: Data pipeline for generating PDFs from HTML files. Built with AWS CDK + TypeScript.
+:briefcase: Data pipeline for generating PDFs from HTML files server-rendered using React in AWS Lambda and Puppeteer. Built with AWS CDK + TypeScript.
 
 This is an example data pipeline that illustrates one possible approach for large-scale PDF generation - it should serve as a good foundation to modify for your own purposes.
 
@@ -38,8 +38,6 @@ cdk deploy
 - [Puppeteer](https://jestjs.io)
 - [AWS CDK](https://aws.amazon.com/cdk/)
 - [AWS Lambda](https://aws.amazon.com/lambda/)
-- [AWS SNS](https://aws.amazon.com/sns/)
-- [AWS DynamoDB](https://aws.amazon.com/dynamodb/)
 - [AWS S3](https://aws.amazon.com/s3/)
 
 **Additional Resources**
@@ -49,7 +47,6 @@ cdk deploy
 - [Puppeteer Lambda](https://github.com/alixaxel/chrome-aws-lambda)
 - [CDK TypeScript Reference](https://docs.aws.amazon.com/cdk/api/latest/typescript/api/index.html)
 - [CDK Assertion Package](https://github.com/aws/aws-cdk/tree/master/packages/%40aws-cdk/assert)
-- [Textract Pricing Chart](https://aws.amazon.com/textract/pricing/)
 - [awesome-cdk repo](https://github.com/eladb/awesome-cdk)
 
 **License**

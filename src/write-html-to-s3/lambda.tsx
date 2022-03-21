@@ -1,13 +1,36 @@
+import * as React from "react";
 import * as fs from "fs";
 import * as AWS from "aws-sdk";
+import * as ReactDOMServer from "react-dom/server";
+import { Component } from "./component";
+
 const s3obj = new AWS.S3();
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || "";
 
 // // // //
 
-function createTmpFile(filename: string) {
-  const content = "<h1>Generate Test PDF</h1>";
-  fs.writeFileSync(filename, content);
+const indexFile = `
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body>
+        <div id="root"></div>
+    </body>
+</html>
+`;
+
+function createHtmlFile(filename: string) {
+  const app = ReactDOMServer.renderToString(<Component />);
+  const html = indexFile.replace(
+    '<div id="root"></div>',
+    `<div id="root">${app}</div>`
+  );
+
+  fs.writeFileSync(filename, html);
 }
 
 // // // //
@@ -24,7 +47,7 @@ export const handler = async (
   const time = Number(new Date());
   const filename: string = `test-${time}.html`;
   const localFilename: string = `/tmp/${filename}`;
-  createTmpFile(localFilename);
+  createHtmlFile(localFilename);
 
   console.log(`Wrote local file: ${localFilename}`);
 

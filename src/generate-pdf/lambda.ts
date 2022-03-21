@@ -7,6 +7,15 @@ const PDFS_S3_BUCKET_NAME = process.env.PDFS_S3_BUCKET_NAME || "";
 
 // // // //
 
+// Define "delay" function
+function delay(timeout: number) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(true);
+    }, timeout);
+  });
+}
+
 export const handler = async (
   event: any = {},
   context: any = {}
@@ -77,6 +86,9 @@ export const handler = async (
     await page.goto(fetchUrl, {
       waitUntil: "domcontentloaded",
     });
+
+    // Wait 2.5 seconds
+    await delay(2500);
 
     // Generate PDF from page in puppeteer
     await page.pdf({
